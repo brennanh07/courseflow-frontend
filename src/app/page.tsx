@@ -65,8 +65,19 @@ export default function Home() {
   const [copiedCRN, setCopiedCRN] = useState<string | null>(null);
 
   // Navigation functions
-  const handleNext = () => setStep(step + 1);
-  const handlePrevious = () => setStep(step - 1);
+  const handleNext = () => {
+    setStep(step + 1);
+    setErrorMessage(""); // Clear any error messages
+    setIsGenerateButtonPressed(false); // Reset the generate button state
+    setIsTimeout(false); // Reset timeout state if it exists
+  };
+
+  const handlePrevious = () => {
+    setStep(step - 1);
+    setErrorMessage(""); // Clear any error messages
+    setIsGenerateButtonPressed(false); // Reset the generate button state
+    setIsTimeout(false); // Reset timeout state if it exists
+  };
 
   // Time conversion functions
   function convertTo24Hour(time: string): string {
@@ -247,19 +258,19 @@ export default function Home() {
     if (!schedules || schedules.length === 0) {
       return [];
     }
-  
+
     // Make sure currentScheduleIndex is valid
     if (currentScheduleIndex < 0 || currentScheduleIndex >= schedules.length) {
       return [];
     }
-  
+
     const currentSchedule = schedules[currentScheduleIndex];
     if (!Array.isArray(currentSchedule)) {
       return [];
     }
-  
+
     const uniqueClassesAndCRNs = new Map();
-  
+
     currentSchedule.forEach((event) => {
       if (event && event.title && event.crn) {
         const className = event.title.split(": ")[0];
@@ -268,7 +279,7 @@ export default function Home() {
         }
       }
     });
-  
+
     return Array.from(uniqueClassesAndCRNs, ([className, crn]) => ({
       className,
       crn,
