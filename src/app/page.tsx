@@ -13,6 +13,7 @@ import "./globals.css";
 
 // Define interfaces for data structures
 interface Course {
+  id: string;
   subject: string;
   courseNumber: string;
 }
@@ -39,9 +40,15 @@ interface ClassEvent {
 export default function Home() {
   // State variables
   const [step, setStep] = useState<number>(1);
+
   const [courses, setCourses] = useState<Course[]>([
-    { subject: "", courseNumber: "" },
+    {
+      id: `course-initial-${Date.now()}`,
+      subject: "",
+      courseNumber: "",
+    },
   ]);
+
   const [breaks, setBreaks] = useState<BreakPeriod[]>([
     { startTime: "", endTime: "" },
   ]);
