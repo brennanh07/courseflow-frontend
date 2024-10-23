@@ -28,6 +28,9 @@ const typedSubjectData: SubjectData = subjectData;
  * and course number. It provides autocomplete suggestions for both fields and
  * allows adding/removing courses dynamically.
  *
+ * Layout has been optimized to prevent shifting issues when entering similar subjects
+ * across different rows. Each row maintains its own independent state for course numbers.
+ *
  * @param {Course[]} courses - Array of current course selections
  * @param {Function} setCourses - Function to update the courses array
  */
@@ -35,12 +38,22 @@ export default function CourseInputSection({
   courses,
   setCourses,
 }: CourseInputSectionProps) {
-  // State for available subjects and course numbers
-  const [subjects, setSubjects] = useState<string[]>(Object.keys(subjectData));
-  const [courseNumbers, setCourseNumbers] = useState<string[]>([]);
+  // State for available subjects (remains constant after initialization)
+  const [subjects] = useState<string[]>(Object.keys(subjectData));
+
+  /**
+   * State for available course numbers, stored per row to prevent interference
+   * between different input rows. Each index corresponds to a course row.
+   * @type {{ [key: string]: string[] }}
+   */
+  const [availableCourseNumbers, setAvailableCourseNumbers] = useState<{
+    [key: string]: string[];
+  }>({});
 
   /**
    * Handle changes to course inputs
+   * Updates the course data and manages the available course numbers for autocomplete
+   *
    * @param {number} index - Index of the course being modified
    * @param {"subject" | "courseNumber"} field - Field being changed
    * @param {string} value - New value for the field
@@ -53,9 +66,22 @@ export default function CourseInputSection({
     const newCourses = [...courses];
     newCourses[index] = { ...newCourses[index], [field]: value };
 
-    // Reset course number when subject changes
+    // Reset course number when subject changes and update available course numbers
     if (field === "subject") {
       newCourses[index].courseNumber = "";
+      // Update available course numbers for this specific row only
+      if (value && typedSubjectData[value]) {
+        setAvailableCourseNumbers((prev) => ({
+          ...prev,
+          [index]: typedSubjectData[value],
+        }));
+      } else {
+        setAvailableCourseNumbers((prev) => {
+          const updated = { ...prev };
+          delete updated[index];
+          return updated;
+        });
+      }
     }
 
     setCourses(newCourses);
@@ -63,6 +89,7 @@ export default function CourseInputSection({
 
   /**
    * Add a new empty course to the list
+   * Limited to maximum of 8 courses
    */
   const addCourse = () => {
     if (courses.length < 8) {
@@ -72,31 +99,20 @@ export default function CourseInputSection({
 
   /**
    * Remove a course from the list
+   * Also cleans up the associated course numbers in state
+   *
    * @param {number} index - Index of the course to remove
    */
   const removeCourse = (index: number) => {
     const newCourses = courses.filter((_, i) => i !== index);
     setCourses(newCourses);
+    // Clean up course numbers for removed row
+    setAvailableCourseNumbers((prev) => {
+      const updated = { ...prev };
+      delete updated[index];
+      return updated;
+    });
   };
-
-  // Update available course numbers when subject changes
-  useEffect(() => {
-    if (courses.length > 0) {
-      const lastCourse = courses[courses.length - 1];
-      if (
-        lastCourse &&
-        lastCourse.subject &&
-        typedSubjectData &&
-        typedSubjectData[lastCourse.subject]
-      ) {
-        setCourseNumbers(typedSubjectData[lastCourse.subject]);
-      } else {
-        setCourseNumbers([]);
-      }
-    } else {
-      setCourseNumbers([]);
-    }
-  }, [courses, typedSubjectData]);
 
   return (
     <div className="flex justify-center items-center flex-col my-8 px-4">
@@ -105,7 +121,6 @@ export default function CourseInputSection({
           Course Input
         </h1>
 
-        {/* Instructions for users */}
         <div className="space-y-2 sm:space-y-4 mb-6 sm:mb-8">
           <p className="text-base sm:text-lg mt-2">
             Enter the subject and course number for each class you are taking
@@ -121,70 +136,72 @@ export default function CourseInputSection({
 
         <div className="bg-primary shadow-xl rounded-lg p-4 sm:p-6">
           <div className="grid grid-cols-1 gap-4 sm:gap-6">
-            {/* Render input fields for each course */}
             {courses.map((course, index) => (
               <div
-                key={index}
-                className="flex items-center justify-center gap-x-4 ml-16 sm:flex-row flex-col sm:gap-4"
+                key={`course-${index}`}
+                className="relative flex justify-center"
               >
-                {/* Subject input with autocomplete */}
-                <div className="relative w-full sm:w-auto">
-                  <input
-                    type="text"
-                    placeholder="Subject"
-                    value={course.subject}
-                    onChange={(e) =>
-                      handleCourseChange(
-                        index,
-                        "subject",
-                        e.target.value.toUpperCase()
-                      )
-                    }
-                    className="text-transform: uppercase font-main bg-accent text-base sm:text-lg input input-bordered w-full sm:w-40 md:w-48 text-center focus:outline-none focus:ring-2 focus:ring-secondary"
-                    list={`subjects-${index}`}
-                  />
-                  <datalist id={`subjects-${index}`}>
-                    {subjects
-                      .filter((subject) => subject.startsWith(course.subject))
-                      .map((subject) => (
-                        <option key={subject} value={subject} />
-                      ))}
-                  </datalist>
+                {/* Center container for SUBJECT-COURSENUM */}
+                <div className="flex items-center justify-center">
+                  <div className="w-40 sm:w-48">
+                    <input
+                      type="text"
+                      placeholder="Subject"
+                      value={course.subject}
+                      onChange={(e) =>
+                        handleCourseChange(
+                          index,
+                          "subject",
+                          e.target.value.toUpperCase()
+                        )
+                      }
+                      className="text-transform: uppercase font-main bg-accent text-base sm:text-lg input input-bordered w-full text-center focus:outline-none focus:ring-2 focus:ring-secondary"
+                      list={`subjects-${index}`}
+                    />
+                    <datalist id={`subjects-${index}`}>
+                      {subjects
+                        .filter((subject) => subject.startsWith(course.subject))
+                        .map((subject) => (
+                          <option key={subject} value={subject} />
+                        ))}
+                    </datalist>
+                  </div>
+
+                  <span className="text-2xl sm:text-3xl text-neutral mx-4">
+                    -
+                  </span>
+
+                  <div className="w-40 sm:w-48">
+                    <input
+                      type="text"
+                      placeholder="Course NUM"
+                      value={course.courseNumber}
+                      onChange={(e) =>
+                        handleCourseChange(
+                          index,
+                          "courseNumber",
+                          e.target.value.toUpperCase()
+                        )
+                      }
+                      className="text-transform: uppercase font-main bg-accent text-base sm:text-lg input input-bordered w-full text-center focus:outline-none focus:ring-2 focus:ring-secondary"
+                      list={`courseNumbers-${index}`}
+                    />
+                    <datalist id={`courseNumbers-${index}`}>
+                      {availableCourseNumbers[index]
+                        ?.filter((number) =>
+                          number.startsWith(course.courseNumber)
+                        )
+                        .map((number) => (
+                          <option key={number} value={number} />
+                        ))}
+                    </datalist>
+                  </div>
                 </div>
 
-                <span className="text-2xl sm:text-3xl text-neutral">-</span>
-
-                {/* Course number input with autocomplete */}
-                <div className="relative w-full sm:w-auto">
-                  <input
-                    type="text"
-                    placeholder="Course NUM"
-                    value={course.courseNumber}
-                    onChange={(e) =>
-                      handleCourseChange(
-                        index,
-                        "courseNumber",
-                        e.target.value.toUpperCase()
-                      )
-                    }
-                    className="text-transform: uppercase font-main bg-accent text-base sm:text-lg input input-bordered w-full sm:w-40 md:w-48 text-center focus:outline-none focus:ring-2 focus:ring-secondary"
-                    list={`courseNumbers-${index}`}
-                  />
-                  <datalist id={`courseNumbers-${index}`}>
-                    {courseNumbers
-                      .filter((number) =>
-                        number.startsWith(course.courseNumber)
-                      )
-                      .map((number) => (
-                        <option key={number} value={number} />
-                      ))}
-                  </datalist>
-                </div>
-
-                {/* Remove course button (hidden for the first course) */}
-                {courses.length > 1 && index > 0 ? (
+                {/* Absolutely positioned remove button */}
+                {courses.length > 1 && index > 0 && (
                   <button
-                    className="font-main btn btn-circle bg-accent text-xl text-center border-none hover:bg-secondary hover:text-white mt-2 sm:mt-0"
+                    className="absolute right-0 top-1/2 -translate-y-1/2 font-main btn btn-circle bg-accent text-xl text-center border-none hover:bg-secondary hover:text-white ml-4"
                     onClick={() => removeCourse(index)}
                   >
                     <svg
@@ -202,34 +219,11 @@ export default function CourseInputSection({
                       />
                     </svg>
                   </button>
-                ) : (
-                  <div
-                    className="mt-2 sm:mt-0"
-                    style={{ visibility: "hidden" }}
-                  >
-                    <button className="font-main btn btn-circle">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth={1.5}
-                        stroke="currentColor"
-                        className="size-6"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M5 12h14"
-                        />
-                      </svg>
-                    </button>
-                  </div>
                 )}
               </div>
             ))}
           </div>
 
-          {/* Add course button (visible only if less than 8 courses) */}
           {courses.length < 8 && (
             <div className="flex justify-center mt-4 sm:mt-6">
               <button
