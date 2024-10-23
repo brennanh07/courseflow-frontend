@@ -640,6 +640,15 @@ export default function Home() {
                   >
                     Hokie Scheduler
                   </a>
+                  &nbsp;or{" "}
+                  <a
+                    href="https://selfservice.banner.vt.edu/ssb/hzskvtrq.P_AddDropCrse"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-500 underline"
+                  >
+                    Course Request
+                  </a>
                 </p>
               </div>
             </div>
