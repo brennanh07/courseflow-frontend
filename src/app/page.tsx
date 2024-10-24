@@ -35,6 +35,9 @@ interface ClassEvent {
   start: Date | string;
   end: Date | string;
   crn: string;
+  location: string;
+  professor: string;
+  gpa: number | string;
 }
 
 export default function Home() {
@@ -202,6 +205,12 @@ export default function Home() {
                 start: convertToISODate(dayOfWeek, startTime),
                 end: convertToISODate(dayOfWeek, endTime),
                 crn: `${schedule.crns[title.split(": ")[0]]}`,
+                location: `${schedule.locations[title.split(": ")[0]]}`,
+                professor: `${schedule.professors[title.split(": ")[0]]}`,
+                gpa:
+                  Number(schedule.gpas[title.split(": ")[0]]) === 0
+                    ? "N/A"
+                    : String(Number(schedule.gpas[title.split(": ")[0]])),
               });
             });
           });
@@ -242,6 +251,9 @@ export default function Home() {
       start: info.event.start,
       end: info.event.end,
       crn: info.event.extendedProps.crn,
+      location: info.event.extendedProps.location,
+      professor: info.event.extendedProps.professor,
+      gpa: info.event.extendedProps.gpa,
     });
     setIsModalOpen(true);
   };
@@ -574,8 +586,17 @@ export default function Home() {
                   <strong>End:</strong>{" "}
                   {convertFromISODate(selectedEvent.end.toString())}
                 </p>
-                <p>
+                <p className="mb-2">
                   <strong>CRN:</strong> {selectedEvent.crn}
+                </p>
+                <p className="mb-2">
+                  <strong>Location:</strong> {selectedEvent.location}
+                </p>
+                <p className="mb-2">
+                  <strong>Instructor:</strong> {selectedEvent.professor}
+                </p>
+                <p className="">
+                  <strong>Average GPA:</strong> {selectedEvent.gpa}
                 </p>
                 <div className="mt-4">
                   <Button
