@@ -10,6 +10,7 @@ import interactionPlugin from "@fullcalendar/interaction";
 import momentPlugin from "@fullcalendar/moment";
 import { Button, Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import "./globals.css";
+import { text } from "stream/consumers";
 
 // Define interfaces for data structures
 interface Course {
@@ -38,7 +39,45 @@ interface ClassEvent {
   location: string;
   professor: string;
   gpa: number | string;
+  backgroundColor?: string;
+  borderColor?: string;
+  textColor?: string;
 }
+
+const COLOR_PALETTE = [
+  {
+    backgroundColor: "#861F41", // Chicago Maroon
+    textColor: "#FFFFFF", // White
+  },
+  {
+    backgroundColor: "#E5751F", // Burnt Orange
+    textColor: "#FFFFFF", // White
+  },
+  {
+    backgroundColor: "#75787B", // Hokie Stone Gray
+    textColor: "#FFFFFF", // White
+  },
+  {
+    backgroundColor: "#333333", // Jet Black
+    textColor: "#FFFFFF", // White
+  },
+  {
+    backgroundColor: "#D9B99B", // Tan
+    textColor: "#FFFFFF", // White
+  },
+  {
+    backgroundColor: "#508590", // Sustainable Teal
+    textColor: "#FFFFFF", // White
+  },
+  {
+    backgroundColor: "#2C5234", // Forest Green
+    textColor: "#FFFFFF", // White
+  },
+  {
+    backgroundColor: "#642667", // Pylon Purple
+    textColor: "#FFFFFF", // White
+  },
+];
 
 export default function Home() {
   // State variables
@@ -129,6 +168,32 @@ export default function Home() {
     return `${hours}:${minutesStr} ${ampm}`;
   }
 
+  const processEvents = (scheduleEvents: any[]) => {
+    const courseColors = new Map();
+    let colorIndex = 0;
+
+    return scheduleEvents.map((event) => {
+      const courseName = event.title.split(": ")[0];
+
+      if (!courseColors.has(courseName)) {
+        courseColors.set(
+          courseName,
+          COLOR_PALETTE[colorIndex % COLOR_PALETTE.length]
+        );
+        colorIndex++;
+      }
+
+      const colors = courseColors.get(courseName);
+
+      return {
+        ...event,
+        backgroundColor: colors.backgroundColor,
+        borderColor: colors.backgroundColor,
+        textColor: colors.textColor,
+      };
+    });
+  };
+
   // Function to handle schedule generation
   const handleGenerateSchedules = () => {
     // Validation check for weights
@@ -214,7 +279,7 @@ export default function Home() {
               });
             });
           });
-          allSchedules.push(scheduleEvents);
+          allSchedules.push(processEvents(scheduleEvents));
         });
 
         setSchedules(allSchedules);
@@ -508,7 +573,6 @@ export default function Home() {
                 titleFormat={"MMMM D, YYYY"}
                 dayHeaderFormat={"ddd"}
                 eventClick={handleEventClick}
-                eventColor="#861F41"
               />
             </div>
             <button
