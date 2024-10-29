@@ -241,6 +241,22 @@ export default function Home() {
       .then((data) => {
         console.log("API Response Data:", data);
 
+        // Check if schedules is an array and contains error messages
+        if (
+          Array.isArray(data.schedules) &&
+          data.schedules.length > 0 &&
+          typeof data.schedules[0] === "string" &&
+          data.schedules[0].startsWith("No sections found")
+        ) {
+          const errorMessages = data.schedules
+            .filter((msg: string) => msg.startsWith("No sections found"))
+            .join("\n");
+
+          setErrorMessage(errorMessages);
+          setIsLoading(false);
+          return;
+        }
+
         if (data.schedules.length === 0) {
           setErrorMessage(
             "No schedules found. Please remove one or more breaks."
@@ -498,7 +514,9 @@ export default function Home() {
       )}
       {errorMessage && (
         <div className="flex justify-center">
-          <span className="text-lg font-main text-red-500">{errorMessage}</span>
+          <span className="text-lg font-main text-red-500 whitespace-pre-line text-center">
+            {errorMessage}
+          </span>
         </div>
       )}
 
@@ -660,7 +678,7 @@ export default function Home() {
                   <strong>Instructor:</strong> {selectedEvent.professor}
                 </p>
                 <p className="">
-                  <strong>Average GPA:</strong> {selectedEvent.gpa}
+                  <strong>Average GPA Outcome:</strong> {selectedEvent.gpa}
                 </p>
                 <div className="mt-4">
                   <Button
