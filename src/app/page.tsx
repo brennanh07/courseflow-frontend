@@ -241,7 +241,6 @@ export default function Home() {
 
     // Make API request to generate schedules
     fetch("https://courseflow.applikuapp.com/api/v1/generate-schedules/", {
-    // fetch("http://127.0.0.1:8000//api/v1/generate-schedules/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
