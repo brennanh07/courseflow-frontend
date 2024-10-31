@@ -11,6 +11,8 @@ import momentPlugin from "@fullcalendar/moment";
 import { Button, Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import "./globals.css";
 import { text } from "stream/consumers";
+import { ProgressBar } from "./ProgressBar";
+import { ResultsModal } from "./ResultsModal";
 
 // Define interfaces for data structures
 interface Course {
@@ -112,6 +114,11 @@ export default function Home() {
   const [currentScheduleIndex, setCurrentScheduleIndex] = useState<number>(0);
   const [isCRNModalOpen, setIsCRNModalOpen] = useState<boolean>(false);
   const [copiedCRN, setCopiedCRN] = useState<string | null>(null);
+  const [showProgress, setShowProgress] = useState<boolean>(false);
+  const [showResultsModal, setShowResultsModal] = useState<boolean>(false);
+  const [totalSchedules, setTotalSchedules] = useState<number>(0);
+  const [isProgressComplete, setIsProgressComplete] = useState<boolean>(false);
+  const [isApiComplete, setIsApiComplete] = useState<boolean>(false);
 
   // Navigation functions
   const handleNext = () => {
@@ -202,10 +209,13 @@ export default function Home() {
       return;
     }
 
-    setIsLoading(true);
+    setShowProgress(true);
+    // setIsLoading(true);
     setIsGenerateButtonPressed(true);
     setErrorMessage("");
     setIsTimeout(false);
+    setIsProgressComplete(false);
+    setIsApiComplete(false);
 
     // Format breaks for API request
     const formattedBreaks = breaks
@@ -230,7 +240,8 @@ export default function Home() {
     console.log("Payload:", payload);
 
     // Make API request to generate schedules
-    fetch("https://courseflow.applikuapp.com/api/v1/generate-schedules/", {
+    // fetch("https://courseflow.applikuapp.com/api/v1/generate-schedules/", {
+    fetch("http://127.0.0.1:8000//api/v1/generate-schedules/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -253,7 +264,8 @@ export default function Home() {
             .join("\n");
 
           setErrorMessage(errorMessages);
-          setIsLoading(false);
+          // setIsLoading(false);
+          setShowProgress(false);
           return;
         }
 
@@ -261,13 +273,15 @@ export default function Home() {
           setErrorMessage(
             "No schedules found. Please remove one or more breaks."
           );
-          setIsLoading(false);
+          // setIsLoading(false);
+          setShowProgress(false);
           return;
         }
 
         if (data.schedules[0] === "timeout") {
           setIsTimeout(true);
-          setIsLoading(false);
+          // setIsLoading(false);
+          setShowProgress(false);
           return;
         }
 
@@ -301,14 +315,48 @@ export default function Home() {
         setSchedules(allSchedules);
         setEvents(allSchedules[0]);
         setCurrentScheduleIndex(0);
-        setStep(step + 1);
-        setIsLoading(false);
+        setTotalSchedules(data.total_schedules);
+        setIsApiComplete(true);
+        // setStep(step + 1);
+        // setIsLoading(false);
+        if (isProgressComplete) {
+          setShowResultsModal(true);
+        }
       })
       .catch((error) => {
         console.error("Error:", error);
-        setIsLoading(false);
+        // setIsLoading(false);
+        setShowProgress(false);
         setIsTimeout(true);
       });
+  };
+
+  const handleViewSchedules = () => {
+    setStep(4);
+    setShowProgress(false);
+  };
+
+  // Function to check if we should show results modal
+  const shouldShowResults = () => {
+    return (
+      showResultsModal &&
+      isProgressComplete &&
+      isApiComplete &&
+      !isTimeout &&
+      !errorMessage
+    );
+  };
+
+  // Function to handle progress bar completion
+  const handleProgressComplete = () => {
+    setIsProgressComplete(true);
+    if (isApiComplete && !isTimeout && !errorMessage) {
+      setShowResultsModal(true);
+    }
+  };
+
+  const handleResultsModalClose = () => {
+    setShowResultsModal(false);
   };
 
   // Functions to navigate between generated schedules
@@ -499,26 +547,51 @@ export default function Home() {
         )}
       </div>
 
-      {/* Loading Spinner */}
-      {isLoading && (
-        <div className="flex justify-center">
-          <span className="loading loading-lg text-6xl"></span>
+      {!showProgress ? (
+        <>
+          {/* Steps Indicator UI*/}
+          {step !== 4 && (
+            <ul className="steps w-1/2 mb-5 font-main font-bold">
+              <li className={`step ${step >= 1 ? "step-primary" : ""}`}>
+                Courses
+              </li>
+              <li className={`step ${step >= 2 ? "step-primary" : ""}`}>
+                Breaks
+              </li>
+              <li className={`step ${step >= 3 ? "step-primary" : ""}`}>
+                Preferences
+              </li>
+            </ul>
+          )}
+        </>
+      ) : (
+        <div className="w-full max-w-2xl mx-auto mt-8 mb-8">
+          <ProgressBar onComplete={handleProgressComplete} />
         </div>
       )}
-      {isTimeout && (
-        <div className="flex justify-center">
-          <span className="text-lg font-main text-red-500">
-            Too many possible schedules. Please add breaks.
-          </span>
-        </div>
-      )}
-      {errorMessage && (
-        <div className="flex justify-center">
-          <span className="text-lg font-main text-red-500 whitespace-pre-line text-center">
-            {errorMessage}
-          </span>
-        </div>
-      )}
+
+      {/* Loading Spinner and Error Messages - Now positioned below the progress bar */}
+      <div className="flex flex-col items-center mt-4">
+        {isLoading && (
+          <div className="flex justify-center">
+            <span className="loading loading-lg text-6xl"></span>
+          </div>
+        )}
+        {isTimeout && (
+          <div className="flex justify-center">
+            <span className="text-lg font-main text-red-500">
+              Too many possible schedules. Please add breaks.
+            </span>
+          </div>
+        )}
+        {errorMessage && (
+          <div className="flex justify-center">
+            <span className="text-lg font-main text-red-500 whitespace-pre-line text-center">
+              {errorMessage}
+            </span>
+          </div>
+        )}
+      </div>
 
       {/* Step 4 - Generated Schedules */}
       {step === 4 && schedules.length > 0 && (
@@ -616,17 +689,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Steps Indicator UI*/}
-      {step !== 4 && (
-        <ul className="steps w-1/2 mb-5 font-main font-bold">
-          <li className={`step ${step >= 1 ? "step-primary" : ""}`}>Courses</li>
-          <li className={`step ${step >= 2 ? "step-primary" : ""}`}>Breaks</li>
-          <li className={`step ${step >= 3 ? "step-primary" : ""}`}>
-            Preferences
-          </li>
-        </ul>
-      )}
-
       {/* Generate Schedules Button at the Bottom */}
       {step === 3 && !isGenerateButtonPressed && (
         <div className="w-full flex flex-col items-center mb-5">
@@ -636,9 +698,6 @@ export default function Home() {
           >
             Generate Schedules
           </button>
-          {errorMessage && (
-            <div className="text-red-500 text-lg font-main">{errorMessage}</div>
-          )}
         </div>
       )}
 
@@ -758,6 +817,12 @@ export default function Home() {
           </DialogPanel>
         </div>
       </Dialog>
+      <ResultsModal
+        isOpen={shouldShowResults()}
+        onClose={handleResultsModalClose}
+        totalSchedules={totalSchedules}
+        onViewSchedules={handleViewSchedules}
+      />
     </div>
   );
 }
