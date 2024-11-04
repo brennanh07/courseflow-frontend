@@ -23,7 +23,7 @@ export const ResultsModal: React.FC<ResultsModalProps> = ({
             Schedules Generated!
           </Dialog.Title>
           <p className="mb-4 text-lg text-center text-secondary">
-            Based on your preferences, we generated
+            Based on your courses, we generated
           </p>
           <p className="text-4xl font-semibold text-center text-black mb-3">
             {totalSchedules}

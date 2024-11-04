@@ -41,6 +41,7 @@ interface ClassEvent {
   location: string;
   professor: string;
   gpa: number | string;
+  totalAvgGPA: number;
   backgroundColor?: string;
   borderColor?: string;
   textColor?: string;
@@ -240,7 +241,8 @@ export default function Home() {
     console.log("Payload:", payload);
 
     // Make API request to generate schedules
-    fetch("https://courseflow.applikuapp.com/api/v1/generate-schedules/", {
+    fetch("http://127.0.0.1:8000/api/v1/generate-schedules/", {
+    // fetch("https://courseflow.applikuapp.com/api/v1/generate-schedules/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -305,6 +307,7 @@ export default function Home() {
                   Number(schedule.gpas[title.split(": ")[0]]) === 0
                     ? "N/A"
                     : String(Number(schedule.gpas[title.split(": ")[0]])),
+                totalAvgGPA: schedule.schedule_total_avg_gpa === null ? "N/A" : schedule.schedule_total_avg_gpa,
               });
             });
           });
@@ -382,6 +385,7 @@ export default function Home() {
       location: info.event.extendedProps.location,
       professor: info.event.extendedProps.professor,
       gpa: info.event.extendedProps.gpa,
+      totalAvgGPA: info.event.extendedProps.totalAvgGPA,
     });
     setIsModalOpen(true);
   };
@@ -605,9 +609,14 @@ export default function Home() {
               </button>{" "}
               {/* This empty div helps with centering */}
             </div>
-            <span className="text-lg font-main text-center w-1/3 font-bold">
-              Schedule {currentScheduleIndex + 1} of {schedules.length}
-            </span>
+            <div className="flex flex-col items-center text-center w-full">
+              <h1 className="text-3xl font-main text-center w-1/3 font-bold">
+                Schedule {currentScheduleIndex + 1} of {schedules.length}
+              </h1>
+              <span className="text-md font-main text-center w-1/3">
+                Overall Average GPA: {events[0]?.totalAvgGPA || "N/A"}
+              </span>
+            </div>
             <div className="w-1/3 flex justify-end">
               <button
                 className="btn btn-secondary text-white font-main mr-16"
